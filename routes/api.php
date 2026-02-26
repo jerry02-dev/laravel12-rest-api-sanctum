@@ -12,8 +12,11 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
-        Route::post('register', [AuthController::class, 'register']);
-        Route::post('login',    [AuthController::class, 'login']);
+        
+        Route::middleware('throttle:3,1')->group(function () {
+            Route::post('register', [AuthController::class, 'register']);
+            Route::post('login',    [AuthController::class, 'login']);
+        });
 
         // Protected auth routes
         Route::middleware('auth:sanctum')->group(function () {
@@ -26,6 +29,13 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('posts', PostController::class);
     });
 });
+
+
+/*
+|--------------------------------------------------------------------------
+| END of API Routes - Version 1
+|--------------------------------------------------------------------------
+*/
 
 Route::fallback(function () {
     return response()->json([

@@ -21,6 +21,17 @@ return Application::configure(basePath: dirname(__DIR__))
             return $request->is('api/*');
         });
 
+        // Handle Throttle for API
+        $exceptions->render(function (\Illuminate\Http\Exceptions\ThrottleRequestsException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'success'     => false,
+                    'message'     => 'Too many attempts. Please wait before trying again.',
+                    'retry_after' => $e->getHeaders()['Retry-After'] . ' seconds',
+                ], 429);
+            }
+        });
+
         // Handle 404 for API
         $exceptions->render(function (\Illuminate\Database\Eloquent\ModelNotFoundException $e, Request $request) {
             if ($request->is('api/*')) {
@@ -50,4 +61,5 @@ return Application::configure(basePath: dirname(__DIR__))
                 ], 401);
             }
         });
+        
     })->create();
