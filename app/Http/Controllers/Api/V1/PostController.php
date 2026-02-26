@@ -15,11 +15,52 @@ class PostController extends Controller
 {
     use ApiResponse;
 
+    public function stats(Request $request): JsonResponse
+    {
+        $userId = $request->user()->id;
+
+        $total     = Post::where('user_id', $userId)->count();
+        $published = Post::where('user_id', $userId)->where('status', 'published')->count();
+        $drafts    = Post::where('user_id', $userId)->where('status', 'draft')->count();
+
+        $monthly = Post::where('user_id', $userId)
+            ->where('created_at', '>=', now()->subMonths(6))
+            ->selectRaw('DATE_FORMAT(created_at, "%b") as month, COUNT(*) as count, MONTH(created_at) as month_num')
+            ->groupBy('month', 'month_num')
+            ->orderBy('month_num')
+            ->get()
+            ->map(fn($item) => [
+                'month' => $item->month,
+                'count' => $item->count,
+            ]);
+
+        return $this->success([
+            'total'     => $total,
+            'published' => $published,
+            'drafts'    => $drafts,
+            'monthly'   => $monthly,
+        ], 'Stats retrieved successfully');
+    }
+
     public function index(Request $request): JsonResponse
     {
-        $posts = Post::where('user_id', $request->user()->id)
-            ->latest()
-            ->paginate(10);
+        $query = Post::where('user_id', $request->user()->id);
+
+        // ✅ Search by title, body & status
+        if ($search = $request->get('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('title',  'like', "%{$search}%")
+                ->orWhere('body', 'like', "%{$search}%")
+                ->orWhere('status', 'like', "%{$search}%");
+            });
+        }
+
+        if ($status = $request->get('status')) {
+            $query->where('status', $status);
+        }
+
+
+        $posts = $query->latest()->paginate(10);
 
         return $this->success(
             PostResource::collection($posts)->response()->getData(true),

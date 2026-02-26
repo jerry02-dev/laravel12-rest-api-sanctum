@@ -22,11 +22,15 @@ Route::prefix('v1')->group(function () {
         Route::middleware('auth:sanctum')->group(function () {
             Route::post('logout', [AuthController::class, 'logout']);
             Route::get('me',      [AuthController::class, 'me']);
+            Route::put('profile',           [AuthController::class, 'updateProfile']);
+            Route::put('change-password',   [AuthController::class, 'changePassword']);
+            Route::delete('delete-account', [AuthController::class, 'deleteAccount']);
         });
     });
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('posts', PostController::class);
+        Route::get('posts-stats', [PostController::class, 'stats']);
     });
 });
 
