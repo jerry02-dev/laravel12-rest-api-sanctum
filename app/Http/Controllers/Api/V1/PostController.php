@@ -42,11 +42,11 @@ class PostController extends Controller
         ], 'Stats retrieved successfully');
     }
 
-    public function index(Request $request): JsonResponse
+   public function index(Request $request): JsonResponse
     {
         $query = Post::where('user_id', $request->user()->id);
 
-        // ✅ Search by title, body & status
+        // Search by title, body & status
         if ($search = $request->get('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('title',  'like', "%{$search}%")
@@ -55,17 +55,23 @@ class PostController extends Controller
             });
         }
 
+        // Filter by status
         if ($status = $request->get('status')) {
             $query->where('status', $status);
         }
 
-
         $posts = $query->latest()->paginate(10);
 
-        return $this->success(
-            PostResource::collection($posts)->response()->getData(true),
-            'Posts retrieved successfully'
-        );
+        // ✅ Manually build flat predictable structure
+        return $this->success([
+            'data'         => PostResource::collection($posts)->resolve(),
+            'total'        => $posts->total(),
+            'per_page'     => $posts->perPage(),
+            'current_page' => $posts->currentPage(),
+            'last_page'    => $posts->lastPage(),
+            'from'         => $posts->firstItem(),
+            'to'           => $posts->lastItem(),
+        ], 'Posts retrieved successfully');
     }
 
     public function store(StorePostRequest $request): JsonResponse
